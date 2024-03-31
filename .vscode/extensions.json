@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "wayou.vscode-todo-highlight",
+        "slevesque.shader",
+        "tamasfe.even-better-toml",
+        "dtoplak.vscode-glsllint",
+        "rust-lang.rust-analyzer"
+    ]
+}
