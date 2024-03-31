@@ -1,0 +1,33 @@
+{
+    "terminal.integrated.fontFamily": "Fira Code Retina",
+    "terminal.integrated.fontWeight": "1",
+    "terminal.integrated.fontSize": 16,
+    "editor.fontFamily": "Fira Code Retina",
+    "editor.fontLigatures": true,
+    "editor.fontSize": 16,
+    "editor.fontWeight": "1",
+    "todohighlight.isEnable": true,
+    "todohighlight.keywords": [
+        {
+            "text": "TODO:",
+            "color": "red",
+            "backgroundColor": "rgba(0,0,0,0)"
+        },
+        {
+            "text": "HACK:",
+            "color": "#ff6600",
+            "backgroundColor": "rgba(0,0,0,0)"
+        },
+        {
+            "text": "NOTE:",
+            "color": "green",
+            "backgroundColor": "rgba(0,0,0,0)"
+        }
+    ],
+    "todohighlight.defaultStyle": {
+        "color": "red",
+        "backgroundColor": "#ffab00",
+        "overviewRulerColor": "rgba(0,0,0,0)",
+        "isWholeLine": false,
+    },
+}

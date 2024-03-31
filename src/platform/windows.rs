@@ -1,35 +1,60 @@
 #![allow(unused_unsafe)]
 
+// Windows platform layer.
+
 use windows::core::*;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Gdi::*;
 use windows::Win32::System::LibraryLoader::*;
 use windows::Win32::UI::WindowsAndMessaging::*;
 
+use std::result::Result;
+
 pub struct PlatformState {
     instance: HINSTANCE,
     window: HWND,
 }
 impl PlatformState {
-    pub fn startup(app_name: &str, x: i32, y: i32, width: i32, height: i32) -> Result<Self> {
+    pub fn startup(
+        app_name: &str,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+    ) -> Result<Self, String> {
         let mut out = Self {
             instance: HINSTANCE::default(),
             window: HWND::default(),
         };
         unsafe {
-            GetModuleHandleExW(0, None, &mut out.instance.into() as *mut _)?;
+            if let Err(e) = GetModuleHandleExW(0, None, &mut out.instance.into() as *mut _) {
+                return Err(e.to_string());
+            }
         }
+
+        // Setup and register window class.
         if unsafe {
             RegisterClassExW(&WNDCLASSEXW {
                 cbSize: std::mem::size_of::<WNDCLASSEXW>() as u32,
-                style: CS_DBLCLKS,
+                style: CS_DBLCLKS, // Get double-clicks
                 lpfnWndProc: Some(Self::win32_process_messages),
                 cbClsExtra: 0,
                 cbWndExtra: 0,
                 hInstance: out.instance,
-                hIcon: unsafe { LoadIconW(out.instance, IDI_APPLICATION)? },
-                hCursor: unsafe { LoadCursorW(out.instance, IDC_ARROW)? },
-                hbrBackground: HBRUSH(0),
+                hIcon: match unsafe { LoadIconW(out.instance, IDI_APPLICATION) } {
+                    Ok(icon) => icon,
+                    Err(e) => {
+                        return Err(e.to_string());
+                    }
+                },
+                hCursor: match unsafe { LoadCursorW(None, IDC_ARROW) } {
+                    // None: Manage the cursor manually
+                    Ok(cur) => cur,
+                    Err(e) => {
+                        return Err(e.to_string());
+                    }
+                },
+                hbrBackground: HBRUSH(0), // Transparent
                 lpszMenuName: PCWSTR::null(),
                 lpszClassName: w!("strings_window_class"),
                 hIconSm: HICON(0),
@@ -44,9 +69,10 @@ impl PlatformState {
                     MB_ICONEXCLAMATION | MB_OK,
                 );
             }
-            return Err(Error::from_win32());
+            return Err(Error::from_win32().to_string());
         }
 
+        // Create window
         let client_x = x as u32;
         let client_y = y as u32;
         let client_width = width as u32;
@@ -64,14 +90,21 @@ impl PlatformState {
         window_style |= WS_MINIMIZEBOX;
         window_style |= WS_THICKFRAME;
 
+        // Obtain the size of the border.
         let mut border = RECT::default();
         unsafe {
-            AdjustWindowRectEx(&mut border as *mut _, window_style, None, window_ex_style)?;
+            if let Err(e) =
+                AdjustWindowRectEx(&mut border as *mut _, window_style, None, window_ex_style)
+            {
+                return Err(e.to_string());
+            }
         }
 
+        // In this case, the border rectangle is negative.
         window_x = (window_x as i32 + border.left) as u32;
         window_y = (window_y as i32 + border.top) as u32;
 
+        // Grow by the size of the OS border.
         window_width = (window_width as i32 + (border.right - border.left)) as u32;
         window_height = (window_height as i32 + (border.bottom - border.top)) as u32;
 
@@ -107,13 +140,16 @@ impl PlatformState {
                 );
             }
             crate::fatal!("Window creation failed!");
-            return Err(Error::from_win32());
+            return Err(Error::from_win32().to_string());
         }
 
-        let should_activate = true;
+        // Show the window
+        let should_activate = true; // TODO: if the window should not accept input, this should be `false`.
         unsafe {
             ShowWindow(
                 out.window,
+                // If initially minimized, use `{SW_MINIMIZE} else {SW_SHOWMINNOACTIVE}`
+                // If initially maximized, use `{SW_SHOWMAXIMIZED} else {SW_MAXIMIZE}`
                 if should_activate {
                     SW_SHOW
                 } else {
@@ -125,10 +161,12 @@ impl PlatformState {
 
         Ok(out)
     }
-    pub fn shutdown(&mut self) -> Result<()> {
+    pub fn shutdown(&mut self) -> Result<(), String> {
         if self.window.0 != 0 {
             unsafe {
-                DestroyWindow(self.window)?;
+                if let Err(e) = DestroyWindow(self.window) {
+                    return Err(e.to_string());
+                }
             }
             self.window = HWND::default();
         }
@@ -152,9 +190,11 @@ impl PlatformState {
     ) -> LRESULT {
         match message {
             WM_ERASEBKGND => {
+                // Notify the OS that erasing will be handled by the application to prevent flicker.
                 return LRESULT(1);
             }
             WM_CLOSE => {
+                // TODO: Fire an event for the application to quit.
                 return LRESULT(0);
             }
             WM_DESTROY => {

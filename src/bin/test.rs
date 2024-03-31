@@ -17,6 +17,4 @@ fn main() {
         }
         platform_state.shutdown().unwrap();
     }
-
-    asserts!(1 == 0);
 }

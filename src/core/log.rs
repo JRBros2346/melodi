@@ -48,47 +48,51 @@ impl std::fmt::Debug for LogLevel {
 
 #[allow(dead_code)]
 fn init() -> Result<(), Infallible> {
+    // TODO: create log file.
     Ok(())
 }
 #[allow(dead_code)]
-fn close() {}
+fn close() {
+    // TODO: cleanup logging/write queued entries.
+}
 
 #[macro_export(local_inner_macros)]
 macro_rules! log {
     ($lvl:expr,$($args:tt)*) => {
         use colored::*;
-        std::eprintln!("{:?}: {}", $lvl, match std::format!($($args)*).color($lvl.color()) {
-            s if $lvl < $crate::core::log::LogLevel::Warn => s.underline(),
-            s => s,
-        });
+        if $lvl < $crate::core::log::LogLevel::Warn {
+            std::eprintln!("{:?}: {}", $lvl, std::format!($($args)*).color($lvl.color()).underline());
+        } else {
+            std::println!("{:?}: {}", $lvl, std::format!($($args)*).color($lvl.color()).underline());
+        }
     };
 }
 
 #[macro_export(local_inner_macros)]
 macro_rules! fatal {
     ($($args:tt)*) => {
-        log!($crate::core::log::LogLevel::Fatal, $($args)*);
+        log!($crate::core::log::LogLevel::Fatal, $($args)*); // Logs a fatal-level message.
     };
 }
 
 #[macro_export(local_inner_macros)]
 macro_rules! error {
     ($($args:tt)*) => {
-        log!($crate::core::log::LogLevel::Error, $($args)*);
+        log!($crate::core::log::LogLevel::Error, $($args)*); // Logs a error-level message.
     };
 }
 
 #[macro_export(local_inner_macros)]
 macro_rules! warn {
     ($($args:tt)*) => {
-        log!($crate::core::log::LogLevel::Warn, $($args)*);
+        log!($crate::core::log::LogLevel::Warn, $($args)*); // Logs a warning-level message.
     };
 }
 
 #[macro_export(local_inner_macros)]
 macro_rules! info {
     ($($args:tt)*) => {
-        log!($crate::core::log::LogLevel::Info, $($args)*);
+        log!($crate::core::log::LogLevel::Info, $($args)*); // Logs a info-level message.
     };
 }
 
@@ -96,7 +100,7 @@ macro_rules! info {
 #[macro_export(local_inner_macros)]
 macro_rules! debug {
     ($($args:tt)*) => {
-        log!($crate::core::log::LogLevel::Debug, $($args)*);
+        log!($crate::core::log::LogLevel::Debug, $($args)*); // Logs a debug-level message.
     };
 }
 #[cfg(not(debug_assertions))]
@@ -109,7 +113,7 @@ macro_rules! debug {
 #[macro_export(local_inner_macros)]
 macro_rules! trace {
     ($($args:tt)*) => {
-        log!($crate::core::log::LogLevel::Trace, $($args)*);
+        log!($crate::core::log::LogLevel::Trace, $($args)*); // Logs a trace-level message.
     };
 }
 #[cfg(any(not(debug_assertions), feature = "no-trace"))]

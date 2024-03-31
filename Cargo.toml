@@ -26,5 +26,6 @@ name = "test"
 
 [features]
 default = ["strings-assertions"]
-strings-assertions = []
+strings-assertions = [] #Disable assertions by disabling this feature
 no-trace = []
+
