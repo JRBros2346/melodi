@@ -1,7 +1,6 @@
 #![allow(unused_unsafe)]
 
 // Windows platform layer.
-
 use windows::core::*;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Gdi::*;
@@ -172,7 +171,7 @@ impl PlatformState {
         }
         Ok(())
     }
-    pub fn pump_messages(&self) -> bool {
+    pub fn pump_messages(&self) -> Result<bool, String> {
         let mut message = MSG::default();
         while unsafe { PeekMessageW(&mut message as *mut _, None, 0, 0, PM_REMOVE) }.0 > 0 {
             unsafe {
@@ -180,7 +179,7 @@ impl PlatformState {
                 DispatchMessageW(&message as *const _);
             }
         }
-        true
+        Ok(true)
     }
     unsafe extern "system" fn win32_process_messages(
         window: HWND,

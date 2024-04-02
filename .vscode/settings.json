@@ -30,4 +30,9 @@
         "overviewRulerColor": "rgba(0,0,0,0)",
         "isWholeLine": false,
     },
+    "rust-analyzer.check.targets": [
+        "x86_64-pc-windows-msvc",
+        "x86_64-unknown-linux-gnu",
+    ],
+    "rust-analyzer.cargo.target": "x86_64-unknown-linux-gnu"
 }

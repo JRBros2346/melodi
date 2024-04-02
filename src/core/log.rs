@@ -63,7 +63,7 @@ macro_rules! log {
         if $lvl < $crate::core::log::LogLevel::Warn {
             std::eprintln!("{:?}: {}", $lvl, std::format!($($args)*).color($lvl.color()).underline());
         } else {
-            std::println!("{:?}: {}", $lvl, std::format!($($args)*).color($lvl.color()).underline());
+            std::println!("{:?}: {}", $lvl, std::format!($($args)*).color($lvl.color()));
         }
     };
 }
