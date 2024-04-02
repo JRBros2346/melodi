@@ -46,19 +46,19 @@ impl std::fmt::Debug for LogLevel {
     }
 }
 
-#[allow(dead_code)]
-fn init() -> Result<(), Infallible> {
+pub(crate) fn init() -> Result<(), Infallible> {
     // TODO: create log file.
     Ok(())
 }
-#[allow(dead_code)]
-fn close() {
+
+pub(crate) fn close() {
     // TODO: cleanup logging/write queued entries.
 }
 
 #[macro_export(local_inner_macros)]
 macro_rules! log {
     ($lvl:expr,$($args:tt)*) => {
+        #[allow(unused_imports)]
         use colored::*;
         if $lvl < $crate::core::log::LogLevel::Warn {
             std::eprintln!("{:?}: {}", $lvl, std::format!($($args)*).color($lvl.color()).underline());

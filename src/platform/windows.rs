@@ -6,12 +6,12 @@ use windows::Win32::Graphics::Gdi::*;
 use windows::Win32::System::LibraryLoader::*;
 use windows::Win32::UI::WindowsAndMessaging::*;
 
-pub struct PlatformState {
+pub(crate) struct PlatformState {
     instance: HINSTANCE,
     window: HWND,
 }
 impl PlatformState {
-    pub fn startup(
+    pub(crate) fn startup(
         app_name: &str,
         x: i32,
         y: i32,
@@ -146,7 +146,7 @@ impl PlatformState {
             Ok(out)
         }
     }
-    pub fn shutdown(&mut self) -> Result<(), String> {
+    pub(crate) fn shutdown(&mut self) -> Result<(), String> {
         unsafe {
             if self.window.0 != 0 {
                 if let Err(e) = DestroyWindow(self.window) {
@@ -157,7 +157,7 @@ impl PlatformState {
             Ok(())
         }
     }
-    pub fn pump_messages(&self) -> Result<bool, String> {
+    pub(crate) fn pump_messages(&self) -> Result<bool, String> {
         unsafe {
             let mut message = MSG::default();
             while PeekMessageW(&mut message as *mut _, None, 0, 0, PM_REMOVE).0 > 0 {
