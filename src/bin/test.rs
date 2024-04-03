@@ -1,3 +1,6 @@
+use strings::game::Game;
+use strings::core::app::AppConfig;
+
 struct MyGame;
 impl strings::game::Game for MyGame {
     fn initialize(&mut self) -> Result<(), String> {
@@ -11,20 +14,14 @@ impl strings::game::Game for MyGame {
     }
     fn on_resize(&mut self, width: u32, height: u32) {}
 }
+
 #[strings::create_game]
-fn create() -> Result<Box<dyn strings::game::Game>, String> {
-    Ok(Box::new(MyGame))
+fn create() -> Result<(Box<dyn Game>, AppConfig), String> {
+    Ok((Box::new(MyGame), AppConfig {
+        x: 100,
+        y: 100,
+        width: 1280,
+        height: 720,
+        name: "Strings Engine Testbed".to_string(),
+    }))
 }
-
-// fn main() -> Result<(), Box<dyn std::error::Error>> {
-//     App::create(&AppConfig {
-//         start_x: 100,
-//         start_y: 100,
-//         start_width: 1280,
-//         start_height: 720,
-//         name: "Kohi Engine Testbed",
-//     })?
-//     .run()?;
-
-//     Ok(())
-// }
