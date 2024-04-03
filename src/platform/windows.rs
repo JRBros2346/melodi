@@ -15,8 +15,8 @@ impl PlatformState {
         app_name: &str,
         x: i32,
         y: i32,
-        width: i32,
-        height: i32,
+        width: u32,
+        height: u32,
     ) -> Result<Self, String> {
         unsafe {
             let mut out = Self {
@@ -67,8 +67,8 @@ impl PlatformState {
             // Create window
             let client_x = x as u32;
             let client_y = y as u32;
-            let client_width = width as u32;
-            let client_height = height as u32;
+            let client_width = width ;
+            let client_height = height;
 
             let mut window_x = client_x;
             let mut window_y = client_y;

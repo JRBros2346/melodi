@@ -19,8 +19,8 @@ impl PlatformState {
         app_name: &str,
         x: i32,
         y: i32,
-        width: i32,
-        height: i32,
+        width: u32,
+        height: u32,
     ) -> Result<Self, String> {
         // Retrieve the connection from the display.
         let (con, n) = match RustConnection::connect(None) {
