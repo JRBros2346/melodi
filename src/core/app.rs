@@ -1,7 +1,7 @@
 use std::sync::atomic::AtomicBool;
 
-use crate::platform::*;
 use crate::game::*;
+use crate::platform::*;
 
 // Application configuration.
 pub struct AppConfig {

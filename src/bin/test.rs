@@ -1,21 +1,18 @@
-
 struct MyGame;
 impl strings::game::Game for MyGame {
-    fn initialize(&mut self) -> Result<(),String> {
+    fn initialize(&mut self) -> Result<(), String> {
         Ok(())
     }
     fn update(&mut self, delta_time: f64) -> Result<(), String> {
         Ok(())
     }
-    fn render(&self, delta_time: f64) -> Result<(),String> {
+    fn render(&self, delta_time: f64) -> Result<(), String> {
         Ok(())
     }
-    fn on_resize(&mut self, width: u32, height: u32) {
-        
-    }
+    fn on_resize(&mut self, width: u32, height: u32) {}
 }
 #[strings::create_game]
-fn create() -> Result<Box<dyn strings::game::Game>,String> {
+fn create() -> Result<Box<dyn strings::game::Game>, String> {
     Ok(Box::new(MyGame))
 }
 

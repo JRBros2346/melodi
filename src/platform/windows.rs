@@ -67,7 +67,7 @@ impl PlatformState {
             // Create window
             let client_x = x as u32;
             let client_y = y as u32;
-            let client_width = width ;
+            let client_width = width;
             let client_height = height;
 
             let mut window_x = client_x;

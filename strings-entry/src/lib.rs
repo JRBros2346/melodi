@@ -4,18 +4,16 @@ use proc_macro::*;
 pub fn create_game(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut fun = Ident::new("create_game", Span::call_site());
     for i in item.clone() {
-        match i {
-            TokenTree::Ident(i) => {
-                if i.to_string() == "fn" {
-                    continue;
-                }
-                fun = i;
-                break;
-            },
-            _ => {}
+        if let TokenTree::Ident(i) = i {
+            if i.to_string() == "fn" {
+                continue;
+            }
+            fun = i;
+            break;
         }
     }
-    format!("
+    format!(
+        "
     // Externally-defined function to create a game.
     {item}
 
@@ -48,5 +46,8 @@ pub fn create_game(_attr: TokenStream, item: TokenStream) -> TokenStream {
             }}
         }};
         Ok(())
-    }}").parse().unwrap()
+    }}"
+    )
+    .parse()
+    .unwrap()
 }
