@@ -1,10 +1,19 @@
 pub trait Game {
     // The game's initialize function.
-    fn initialize(&mut self) -> Result<(), String>;
+    fn initialize(&mut self) -> Result<(), GameError>;
     // The game's update function.
-    fn update(&mut self, delta_time: f64) -> Result<(), String>;
+    fn update(&mut self, delta_time: f64) -> Result<(), GameError>;
     // The game's render function.
-    fn render(&self, delta_time: f64) -> Result<(), String>;
+    fn render(&self, delta_time: f64) -> Result<(), GameError>;
     // To handle resizes, if applicable.
     fn on_resize(&mut self, width: u32, height: u32);
 }
+
+#[derive(Debug)]
+pub enum GameError {}
+impl std::fmt::Display for GameError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Ok(())
+    }
+}
+impl std::error::Error for GameError {}
