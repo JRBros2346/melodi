@@ -6,4 +6,5 @@ pub mod platform;
 
 pub mod game;
 
-pub use strings_entry::create_game;
+pub mod entry;
+// pub use strings_entry::create_game;

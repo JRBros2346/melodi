@@ -187,7 +187,7 @@ impl PlatformState {
     }
 }
 
-pub(crate) enum PlatformError {
+pub enum PlatformError {
     Connect(ConnectError),
     Connection(ConnectionError),
     RelyOrId(ReplyOrIdError),

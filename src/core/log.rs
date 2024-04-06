@@ -8,12 +8,12 @@ pub use asserts::*;
 #[repr(u8)]
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
-    Fatal = 0,
-    Error = 1,
-    Warn = 2,
-    Info = 3,
-    Debug = 4,
-    Trace = 5,
+    Fatal,
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
 }
 impl LogLevel {
     #[inline]

@@ -8,7 +8,8 @@ edition = "2021"
 [dependencies]
 vulkano = "0.34.1"
 colored = "2.1.0"
-strings-entry = { path = "strings-entry" }
+strum = { version = "0.26", features = ["derive"] }
+lazy_static = "1.4.0"
 
 [target.'cfg(windows)'.dependencies.windows]
 version = "0.54.0"
@@ -24,9 +25,6 @@ x11rb = "0.13.0"
 
 [[bin]]
 name = "test"
-
-[workspace]
-members = ["strings-entry"]
 
 [features]
 default = ["strings-assertions"]

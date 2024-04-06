@@ -6,24 +6,26 @@ impl strings::game::Game for MyGame {
     fn initialize(&mut self) -> Result<(), GameError> {
         Ok(())
     }
-    fn update(&mut self, delta_time: f64) -> Result<(), GameError> {
+    fn update(&mut self, _delta_time: f64) -> Result<(), GameError> {
         Ok(())
     }
-    fn render(&self, delta_time: f64) -> Result<(), GameError> {
+    fn render(&self, _delta_time: f64) -> Result<(), GameError> {
         Ok(())
     }
-    fn on_resize(&mut self, width: u32, height: u32) {}
+    fn on_resize(&mut self, _width: u32, _height: u32) {}
 }
 
 strings::create_game! {
-    Ok((
-        Box::new(MyGame),
-        AppConfig {
-            x: 100,
-            y: 100,
-            width: 1280,
-            height: 720,
-            name: "Strings Engine Testbed".to_string(),
-        }
-    ))
+    {
+        Ok((
+            Box::new(MyGame),
+            AppConfig {
+                x: 100,
+                y: 100,
+                width: 1280,
+                height: 720,
+                name: "Strings Engine Testbed".to_string(),
+            }
+        ))
+    }
 }

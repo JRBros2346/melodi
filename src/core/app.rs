@@ -28,7 +28,7 @@ pub struct App {
     platform: PlatformState,
     width: u32,
     height: u32,
-    last_time: f64,
+    _last_time: f64,
 }
 
 #[allow(non_upper_case_globals)]
@@ -66,7 +66,7 @@ impl App {
             .map_err(AppCreateError::Platform)?,
             width: app_config.width,
             height: app_config.height,
-            last_time: 0.0,
+            _last_time: 0.0,
         };
 
         if let Err(e) = out.game.initialize() {
@@ -82,6 +82,7 @@ impl App {
     }
     pub fn run(mut self) -> Result<(), AppRunError> {
         let mut res = Ok(());
+        crate::info!("{}", super::mem::get_memory_usage());
         while self.running {
             if !self
                 .platform
@@ -109,6 +110,8 @@ impl App {
         self.running = false;
 
         self.platform.shutdown().map_err(AppRunError::Platform)?;
+
+        crate::core::log::close();
 
         res
     }

@@ -13,7 +13,7 @@ pub trait Game {
 pub enum GameError {}
 impl std::fmt::Display for GameError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Ok(())
+        write!(f, "GameError")
     }
 }
 impl std::error::Error for GameError {}
