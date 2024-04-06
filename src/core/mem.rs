@@ -51,6 +51,21 @@ pub unsafe fn dealloc(ptr: *mut u8, size: usize, tag: MemoryTag) {
     tagged_allocation.lock().unwrap()[tag as usize] -= size as u128;
     std::alloc::dealloc(ptr, Layout::from_size_align(size, 1).unwrap())
 }
+pub unsafe fn realloc(
+    ptr: &mut *mut u8,
+    old_size: usize,
+    new_size: usize,
+    tag: MemoryTag,
+) {
+    if tag == MemoryTag::Unknown {
+        crate::warn!("`dealloc` called using `MemorTag::Unknown`. Re-class this allocation.");
+    }
+    *total_allocation.lock().unwrap() -= old_size as u128;
+    tagged_allocation.lock().unwrap()[tag as usize] -= new_size as u128;
+    *total_allocation.lock().unwrap() += old_size as u128;
+    tagged_allocation.lock().unwrap()[tag as usize] += new_size as u128;
+    *ptr = std::alloc::realloc(*ptr, Layout::from_size_align(old_size, 1).unwrap(), new_size)
+}
 pub fn format_bytes(bytes: u128) -> String {
     #![allow(non_upper_case_globals)]
     const KiB: u128 = 1024;
