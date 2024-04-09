@@ -1,5 +1,4 @@
-#![allow(non_upper_case_globals)]
-use std::{alloc::Layout, sync::Mutex};
+use std::{mem::MaybeUninit, sync::Mutex};
 use strum::{EnumCount, IntoEnumIterator};
 
 #[repr(usize)]
@@ -30,41 +29,49 @@ pub fn init() {}
 pub fn close() {}
 
 lazy_static::lazy_static! {
-    static ref total_allocation: Mutex<u128> = Mutex::new(0);
-    static ref tagged_allocation: Mutex<[u128; MemoryTag::COUNT]> =
+    static ref TOTAL_ALLOCATION: Mutex<u128> = Mutex::new(0);
+    static ref TAGGED_ALLOCATION: Mutex<[u128; MemoryTag::COUNT]> =
         Mutex::new([0; MemoryTag::COUNT]);
 }
 
-pub unsafe fn alloc(size: usize, tag: MemoryTag) -> *mut u8 {
-    if tag == MemoryTag::Unknown {
-        crate::warn!("`alloc` called using `MemorTag::Unknown`. Re-class this allocation.");
-    }
-    *total_allocation.lock().unwrap() += size as u128;
-    tagged_allocation.lock().unwrap()[tag as usize] += size as u128;
-    std::alloc::alloc_zeroed(Layout::from_size_align(size, 1).unwrap())
+pub fn total_allocation() -> u128 {
+    *TOTAL_ALLOCATION.lock().unwrap()
 }
-pub unsafe fn dealloc(ptr: *mut u8, size: usize, tag: MemoryTag) {
-    if tag == MemoryTag::Unknown {
-        crate::warn!("`dealloc` called using `MemorTag::Unknown`. Re-class this allocation.");
-    }
-    *total_allocation.lock().unwrap() -= size as u128;
-    tagged_allocation.lock().unwrap()[tag as usize] -= size as u128;
-    std::alloc::dealloc(ptr, Layout::from_size_align(size, 1).unwrap())
+pub fn tagged_allocation(tag: MemoryTag) -> u128 {
+    TAGGED_ALLOCATION.lock().unwrap()[tag as usize]
 }
-pub unsafe fn realloc(
-    ptr: &mut *mut u8,
-    old_size: usize,
-    new_size: usize,
-    tag: MemoryTag,
-) {
+
+pub unsafe fn alloc<T>(size: usize, tag: MemoryTag) -> Box<[MaybeUninit<T>]> {
     if tag == MemoryTag::Unknown {
-        crate::warn!("`dealloc` called using `MemorTag::Unknown`. Re-class this allocation.");
+        crate::warn!("`alloc` called using `MemoryTag::Unknown`. Re-class this allocation.");
     }
-    *total_allocation.lock().unwrap() -= old_size as u128;
-    tagged_allocation.lock().unwrap()[tag as usize] -= new_size as u128;
-    *total_allocation.lock().unwrap() += old_size as u128;
-    tagged_allocation.lock().unwrap()[tag as usize] += new_size as u128;
-    *ptr = std::alloc::realloc(*ptr, Layout::from_size_align(old_size, 1).unwrap(), new_size)
+    *TOTAL_ALLOCATION.lock().unwrap() += size as u128 * std::mem::size_of::<T>() as u128;
+    TAGGED_ALLOCATION.lock().unwrap()[tag as usize] +=
+        size as u128 * std::mem::size_of::<T>() as u128;
+    (0..size).map(|_| MaybeUninit::zeroed()).collect::<Vec<_>>().into_boxed_slice()
+}
+pub unsafe fn dealloc<T>(boxed: Box<[MaybeUninit<T>]>, tag: MemoryTag) {
+    if tag == MemoryTag::Unknown {
+        crate::warn!("`dealloc` called using `MemoryTag::Unknown`. Re-class this allocation.");
+    }
+    *TOTAL_ALLOCATION.lock().unwrap() -= boxed.len() as u128 * std::mem::size_of::<T>() as u128;
+    TAGGED_ALLOCATION.lock().unwrap()[tag as usize] -=
+        boxed.len() as u128 * std::mem::size_of::<T>() as u128;
+    drop(boxed)
+}
+pub unsafe fn realloc<T>(boxed: &mut Box<[MaybeUninit<T>]>, new_size: usize, tag: MemoryTag) {
+    if tag == MemoryTag::Unknown {
+        crate::warn!("`realloc` called using `MemoryTag::Unknown`. Re-class this allocation.");
+    }
+    *TOTAL_ALLOCATION.lock().unwrap() -= boxed.len() as u128 * std::mem::size_of::<T>() as u128;
+    TAGGED_ALLOCATION.lock().unwrap()[tag as usize] -=
+        boxed.len() as u128 * std::mem::size_of::<T>() as u128;
+    *TOTAL_ALLOCATION.lock().unwrap() += new_size as u128 * std::mem::size_of::<T>() as u128;
+    TAGGED_ALLOCATION.lock().unwrap()[tag as usize] +=
+        new_size as u128 * std::mem::size_of::<T>() as u128;
+    let mut new_boxed = (0..new_size).map(|_| MaybeUninit::zeroed()).collect::<Vec<_>>().into_boxed_slice();
+    std::ptr::copy_nonoverlapping(boxed.as_ptr(), new_boxed.as_mut_ptr(), boxed.len().min(new_size));
+    *boxed = new_boxed;
 }
 pub fn format_bytes(bytes: u128) -> String {
     #![allow(non_upper_case_globals)]
@@ -115,7 +122,7 @@ pub fn get_memory_usage() -> String {
         .count();
     let mut out = String::from("System mempory use (tagged):\n");
     out.reserve(line_length * (MemoryTag::COUNT + 2));
-    let lock = tagged_allocation.lock().unwrap();
+    let lock = TAGGED_ALLOCATION.lock().unwrap();
     for tag in MemoryTag::iter() {
         out += &format!(
             "\t{:>align$}: {}\n",
@@ -127,7 +134,40 @@ pub fn get_memory_usage() -> String {
     out += &format!(
         "\t{:>align$}: {}\n",
         "Total",
-        total_allocation.lock().unwrap()
+        format_bytes(*TOTAL_ALLOCATION.lock().unwrap())
     );
     out
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_alloc_dealloc() {
+        let size = 5;
+        let tag = MemoryTag::Unknown;
+        let allocation = unsafe { alloc::<u32>(size, tag) };
+        crate::info!("{}",get_memory_usage());
+        assert_eq!(total_allocation(), size as u128 * std::mem::size_of::<u32>() as u128);
+        assert_eq!(tagged_allocation(tag), size as u128 * std::mem::size_of::<u32>() as u128);
+
+        unsafe { dealloc(allocation, tag) };
+        crate::info!("{}", get_memory_usage());
+        assert_eq!(total_allocation(), 0);
+        assert_eq!(tagged_allocation(tag), 0);
+    }
+
+    #[test]
+    fn test_realloc() {
+        let mut allocation = unsafe { alloc::<u32>(5, MemoryTag::Unknown) };
+
+        let new_size = 10;
+        let tag = MemoryTag::Unknown;
+
+        unsafe { realloc(&mut allocation, new_size, tag) };
+
+        assert_eq!(allocation.len(), new_size);
+        assert_eq!(total_allocation(), new_size as u128 * std::mem::size_of::<u32>() as u128);
+        assert_eq!(tagged_allocation(tag), new_size as u128 * std::mem::size_of::<u32>() as u128);
+    }
 }

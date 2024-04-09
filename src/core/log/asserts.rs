@@ -13,32 +13,35 @@ pub fn report_assertion_failure(expr: &str, msg: &str, file: &str, line: u32) {
 }
 
 #[macro_export]
-macro_rules! asserts {
+macro_rules! assert {
     ($expr:expr) => {
         if ($expr) {
         } else {
             $crate::core::log::report_assertion_failure(stringify!($expr), "", file!(), line!());
+            std::assert!($expr);
         }
     };
 }
 
 #[macro_export]
-macro_rules! asserts_msg {
+macro_rules! assert_msg {
     ($expr:expr, $msg:literal) => {
         if ($expr) {
         } else {
             $crate::core::log::report_assertion_failure(stringify!($expr), $msg, file!(), line!());
+            std::assert!($expr);
         }
     };
 }
 
 #[cfg(debug_assertions)]
 #[macro_export]
-macro_rules! asserts_debug {
+macro_rules! assert_debug {
     ($expr:expr) => {
         if ($expr) {
         } else {
             $crate::core::log::report_assertion_failure(stringify!($expr), "", file!(), line!());
+            std::assert!($expr);
         }
     };
 }
