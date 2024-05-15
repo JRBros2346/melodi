@@ -1,14 +1,14 @@
-use std::mem::MaybeUninit;
 use once_cell::sync::Lazy;
-use strum::{EnumCount, IntoEnumIterator};
 use portable_atomic::{AtomicU128, Ordering};
+use std::mem::MaybeUninit;
+use strum::{EnumCount, IntoEnumIterator};
 
 #[repr(usize)]
 #[derive(
     PartialEq, Eq, Clone, Copy, strum::FromRepr, strum::EnumCount, strum::EnumIter, strum::AsRefStr,
 )]
 pub enum MemoryTag {
-    Unknown,
+    Unknown = 0,
     Array,
     Vector,
     Map,
@@ -31,7 +31,8 @@ pub fn init() {}
 pub fn close() {}
 
 static TOTAL_ALLOCATION: AtomicU128 = AtomicU128::new(0);
-static TAGGED_ALLOCATION: Lazy<[AtomicU128; MemoryTag::COUNT]> = Lazy::new(|| std::array::from_fn(|_| AtomicU128::new(0)));
+static TAGGED_ALLOCATION: Lazy<[AtomicU128; MemoryTag::COUNT]> =
+    Lazy::new(|| std::array::from_fn(|_| AtomicU128::new(0)));
 // {
 //     const ARRAY_REPEAT_VALUE: Mutex<u128> = Mutex::new(0);
 //     let mut arr = [ARRAY_REPEAT_VALUE; MemoryTag::COUNT];
@@ -52,8 +53,14 @@ pub unsafe fn alloc<T>(size: usize, tag: MemoryTag) -> Box<[MaybeUninit<T>]> {
     if tag == MemoryTag::Unknown {
         crate::warn!("`alloc` called using `MemoryTag::Unknown`. Re-class this allocation.");
     }
-    TOTAL_ALLOCATION.fetch_add(size as u128 * std::mem::size_of::<T>() as u128, Ordering::Relaxed);
-    TAGGED_ALLOCATION[tag as usize].fetch_add(size as u128 * std::mem::size_of::<T>() as u128, Ordering::Relaxed);
+    TOTAL_ALLOCATION.fetch_add(
+        size as u128 * std::mem::size_of::<T>() as u128,
+        Ordering::Relaxed,
+    );
+    TAGGED_ALLOCATION[tag as usize].fetch_add(
+        size as u128 * std::mem::size_of::<T>() as u128,
+        Ordering::Relaxed,
+    );
     (0..size)
         .map(|_| MaybeUninit::zeroed())
         .collect::<Vec<_>>()
@@ -63,18 +70,36 @@ pub unsafe fn dealloc<T>(boxed: Box<[MaybeUninit<T>]>, tag: MemoryTag) {
     if tag == MemoryTag::Unknown {
         crate::warn!("`dealloc` called using `MemoryTag::Unknown`. Re-class this allocation.");
     }
-    TOTAL_ALLOCATION.fetch_sub(boxed.len() as u128 * std::mem::size_of::<T>() as u128, Ordering::Relaxed);
-    TAGGED_ALLOCATION[tag as usize].fetch_sub(boxed.len() as u128 * std::mem::size_of::<T>() as u128, Ordering::Relaxed);
+    TOTAL_ALLOCATION.fetch_sub(
+        boxed.len() as u128 * std::mem::size_of::<T>() as u128,
+        Ordering::Relaxed,
+    );
+    TAGGED_ALLOCATION[tag as usize].fetch_sub(
+        boxed.len() as u128 * std::mem::size_of::<T>() as u128,
+        Ordering::Relaxed,
+    );
     drop(boxed)
 }
 pub unsafe fn realloc<T>(boxed: &mut Box<[MaybeUninit<T>]>, new_size: usize, tag: MemoryTag) {
     if tag == MemoryTag::Unknown {
         crate::warn!("`realloc` called using `MemoryTag::Unknown`. Re-class this allocation.");
     }
-    TOTAL_ALLOCATION.fetch_sub(boxed.len() as u128 * std::mem::size_of::<T>() as u128, Ordering::Relaxed);
-    TAGGED_ALLOCATION[tag as usize].fetch_sub(boxed.len() as u128 * std::mem::size_of::<T>() as u128, Ordering::Relaxed);
-    TOTAL_ALLOCATION.fetch_add(new_size as u128 * std::mem::size_of::<T>() as u128, Ordering::Relaxed);
-    TAGGED_ALLOCATION[tag as usize].fetch_add(new_size as u128 * std::mem::size_of::<T>() as u128, Ordering::Relaxed);
+    TOTAL_ALLOCATION.fetch_sub(
+        boxed.len() as u128 * std::mem::size_of::<T>() as u128,
+        Ordering::Relaxed,
+    );
+    TAGGED_ALLOCATION[tag as usize].fetch_sub(
+        boxed.len() as u128 * std::mem::size_of::<T>() as u128,
+        Ordering::Relaxed,
+    );
+    TOTAL_ALLOCATION.fetch_add(
+        new_size as u128 * std::mem::size_of::<T>() as u128,
+        Ordering::Relaxed,
+    );
+    TAGGED_ALLOCATION[tag as usize].fetch_add(
+        new_size as u128 * std::mem::size_of::<T>() as u128,
+        Ordering::Relaxed,
+    );
     let mut new_boxed = (0..new_size)
         .map(|_| MaybeUninit::zeroed())
         .collect::<Vec<_>>()

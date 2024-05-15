@@ -6,7 +6,7 @@ mod asserts;
 pub use asserts::*;
 
 #[repr(u8)]
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum LogLevel {
     Fatal,
     Error,
