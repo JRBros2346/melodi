@@ -6,7 +6,7 @@ pub trait Game {
     // The game's render function.
     fn render(&self, delta_time: f64) -> Result<(), GameError>;
     // To handle resizes, if applicable.
-    fn on_resize(&mut self, width: u32, height: u32);
+    fn on_resize(&mut self, width: u16, height: u16);
 }
 
 #[derive(Debug)]

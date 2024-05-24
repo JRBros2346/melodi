@@ -16,10 +16,10 @@ pub(crate) struct PlatformState {
 impl PlatformState {
     pub(crate) fn startup(
         app_name: &str,
-        x: i32,
-        y: i32,
-        width: u32,
-        height: u32,
+        x: i16,
+        y: i16,
+        width: u16,
+        height: u16,
     ) -> Result<Self, PlatformError> {
         // Retrieve the connection from the display.
         let (con, n) = match RustConnection::connect(None) {
@@ -70,10 +70,10 @@ impl PlatformState {
                 x11rb::COPY_FROM_PARENT as u8,
                 out.window,
                 out.screen.root,
-                x as i16,
-                y as i16,
-                width as u16,
-                height as u16,
+                x,
+                y,
+                width,
+                height,
                 0,
                 WindowClass::INPUT_OUTPUT,
                 out.screen.root_visual,

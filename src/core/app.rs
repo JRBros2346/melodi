@@ -1,21 +1,22 @@
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::game::*;
 use crate::platform::*;
+use crate::core::event;
 
 // Application configuration.
 pub struct AppConfig {
     // Window starting position x axis, if applicable.
-    pub x: i32,
+    pub x: i16,
 
     // Window starting position y axis, if applicable.
-    pub y: i32,
+    pub y: i16,
 
     // Window starting width, if applicable.
-    pub width: u32,
+    pub width: u16,
 
     // Window starting height, if applicable.
-    pub height: u32,
+    pub height: u16,
 
     // The application name used in windowing, if applicable.
     pub name: String,
@@ -26,17 +27,16 @@ pub struct App {
     running: bool,
     suspended: bool,
     platform: PlatformState,
-    width: u32,
-    height: u32,
+    width: u16,
+    height: u16,
     _last_time: f64,
 }
 
-#[allow(non_upper_case_globals)]
-static initialized: AtomicBool = AtomicBool::new(false);
+static INIT: AtomicBool = AtomicBool::new(false);
 
 impl App {
     pub fn create(game: Box<dyn Game>, app_config: AppConfig) -> Result<Self, AppCreateError> {
-        if initialized.load(std::sync::atomic::Ordering::Relaxed) {
+        if INIT.load(Ordering::Relaxed) {
             crate::error!("`App::create()` called more than once.");
             return Err(AppCreateError::MultipleCreateError);
         }
@@ -69,6 +69,11 @@ impl App {
             _last_time: 0.0,
         };
 
+        if !event::init() {
+            crate::error!("Event Syatem Failed Initialization. App cannot continue");
+            return Err(AppCreateError::MultipleCreateError);
+        }
+
         if let Err(e) = out.game.initialize() {
             crate::fatal!("Game failed to initialize.");
             return Err(AppCreateError::Game(e));
@@ -76,7 +81,7 @@ impl App {
 
         out.game.on_resize(out.width, out.height);
 
-        initialized.store(true, std::sync::atomic::Ordering::Relaxed);
+        INIT.store(true, Ordering::Relaxed);
 
         Ok(out)
     }
@@ -108,6 +113,8 @@ impl App {
         }
 
         self.running = false;
+
+        event::close();
 
         self.platform.shutdown().map_err(AppRunError::Platform)?;
 

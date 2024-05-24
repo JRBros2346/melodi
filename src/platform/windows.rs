@@ -13,10 +13,10 @@ pub(crate) struct PlatformState {
 impl PlatformState {
     pub(crate) fn startup(
         app_name: &str,
-        x: i32,
-        y: i32,
-        width: u32,
-        height: u32,
+        x: i16,
+        y: i16,
+        width: u16,
+        height: u16,
     ) -> Result<Self, PlatformError> {
         unsafe {
             let mut out = Self {
@@ -53,10 +53,10 @@ impl PlatformState {
             }
 
             // Create window
-            let client_x = x as u32;
-            let client_y = y as u32;
-            let client_width = width;
-            let client_height = height;
+            let client_x = x as i32;
+            let client_y = y as i32;
+            let client_width = width as i32;
+            let client_height = height as i32;
 
             let mut window_x = client_x;
             let mut window_y = client_y;
@@ -76,12 +76,12 @@ impl PlatformState {
                 .map_err(PlatformError)?;
 
             // In this case, the border rectangle is negative.
-            window_x = (window_x as i32 + border.left) as u32;
-            window_y = (window_y as i32 + border.top) as u32;
+            window_x = window_x + border.left;
+            window_y = window_y + border.top;
 
             // Grow by the size of the OS border.
-            window_width = (window_width as i32 + (border.right - border.left)) as u32;
-            window_height = (window_height as i32 + (border.bottom - border.top)) as u32;
+            window_width = window_width + (border.right - border.left);
+            window_height = window_height + (border.bottom - border.top);
 
             out.window = CreateWindowExW(
                 window_ex_style,
@@ -94,10 +94,10 @@ impl PlatformState {
                         .as_ptr(),
                 ),
                 window_style,
-                window_x as i32,
-                window_y as i32,
-                window_width as i32,
-                window_height as i32,
+                window_x,
+                window_y,
+                window_width,
+                window_height,
                 None,
                 None,
                 out.instance,

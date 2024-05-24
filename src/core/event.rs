@@ -1,121 +1,89 @@
-use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, Weak};
 
 use once_cell::sync::Lazy;
 
-use crate::collections::Vect;
+static INIT: AtomicBool = AtomicBool::new(false);
+static STATE: Mutex<Lazy<HashMap<&'static str, Vec<(Weak<dyn Send + Sync>, Box<On>)>>>> = Mutex::new(Lazy::new(|| HashMap::new()));
 
-pub trait Sender: Send + Sync {
+pub trait Sender {
     fn fire(&self, event: impl Event) -> bool {
         if INIT.load(Ordering::Relaxed) {
             false
         } else {
-            // If nothing is registered for the code, boot out.
-            let (code, context) = event.get_id_and_context();
-            if STATE[code as usize].is_empty() {
-                return false;
-            }
-    
-            for l in STATE[code as usize].iter() {
-                if l.on_event(Some(self), event) {
-                    // Message has been handled, do not send to other listeners.
-                    return true;
+            for (l, c) in match STATE.lock().unwrap().get(event.get_name()) {
+                Some(v) => v,
+                None => { return false; }
+            } {
+                if let Some(l) = l.upgrade() {
+                    if c(l, &event) {
+                        return true;
+                    }
                 }
             }
-    
-            // Not found.
-            false
-        }
-    }
-}
-impl Sender for () {
-    fn fire(&self, event: impl Event) -> bool {
-        if INIT.load(Ordering::Relaxed) {
-            false
-        } else {
-            // If nothing is registered for the code, boot out.
-            let (code, _) = event.get_id_and_context();
-            if STATE[code as usize].is_empty() {
-                return false;
-            }
-    
-            for l in STATE[code as usize].iter() {
-                if l.on_event(None, event) {
-                    // Message has been handled, do not send to other listeners.
-                    return true;
-                }
-            }
-    
-            // Not found.
             false
         }
     }
 }
 
-trait OnEvent {
-    const N: u16 = 0;
-    fn on_event(&self, sender: Option<&impl Sender>, event: EventContext) -> bool;
+pub trait Event {
+    fn get_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
 }
-
-pub trait Listener: Send + Sync + OnEvent {
-    fn register(&self, code: u16) -> bool {
-        if !INIT.load(Ordering::Relaxed) {
+pub struct Listener {
+    listener: Arc<dyn Send + Sync>,
+    events: Vec<&'static str>
+}
+impl Listener {
+    pub fn new<T: Send + Sync + 'static>(val: T) -> Self {
+        Self { 
+            listener: Arc::new(val) as Arc<dyn Send + Sync>,
+            events: Vec::new(),
+        }
+    }
+    pub fn register(&mut self, event: impl Event, callback: Box<On>) -> bool {
+        if INIT.load(Ordering::Relaxed) || self.events.contains(&event.get_name()) {
             false
         } else {
-            for l in STATE[code as usize].iter() {
-                if &*l as *const _ as *const u8 == self as *const _ as *const u8 {
-                    // TODO: warn
-                    return false;
-                }
-            }
-    
-            // If at this point, no duplicate was found. Proceed with registration.
-            STATE
-                .get_mut(code as usize)
-                .unwrap()
-                .push(Arc::new(self));
+            self.events.push(event.get_name());
+            match STATE.lock().unwrap().get_mut(event.get_name()) {
+                Some(v) => v,
+                None => { return false; }
+            }.push((Arc::<dyn Send + Sync>::downgrade(&self.listener.clone()), callback));
             true
         }
     }
-    fn unregister(&self, code: u16) -> bool {
+    pub fn unregister(&mut self, event: &'static str) -> bool {
         if INIT.load(Ordering::Relaxed) {
             false
         } else {
-            // On nothing is registered for the code, boot out.
-            if STATE[code as usize].is_empty() {
-                // TODO: warn
-                return false;
-            }
-    
-            for i in 0..STATE[code as usize].len() {
-                let l = STATE[code as usize][i];
-                if &*l as *const _ as *const u8 == self as *const _ as *const u8 {
-                    // Found one, remove it
-                    STATE[code as usize].remove(i);
-                    return true;
-                }
-            }
-    
-            // Not found.
-            false
+            let i = match match STATE.lock().unwrap().get_mut(event) {
+                Some(v) => v,
+                None => { return false; }
+            }.iter().position(|(a, _)| Arc::ptr_eq(&self.listener, &match a.upgrade() {
+                Some(arc) => arc,
+                None => { return false; }
+            })) {
+                Some(i) => i,
+                None => { return false; }
+            };
+            let _ = match STATE.lock().unwrap().get_mut(event) {
+                Some(v) => v,
+                None => { return false; }
+            }.remove(i);
+            let i = match self.events.iter().position(|&a| a==event) {
+                Some(i) => i,
+                None => { return false; }
+            };
+            self.events.remove(i);
+            true
         }
     }
 }
 
-pub trait Event: Send + Sync {
-    fn get_id_and_context(&self) -> (u16, EventContext);
-}
-
-// This should be more than enough codes...
-const MAX_MESSAGE_CODES: usize = 65536;
-
-/**
- * Event system internal state.
- */
-static INIT: AtomicBool = AtomicBool::new(false);
-static STATE: Lazy<[Vect<Arc<dyn Listener>>; MAX_MESSAGE_CODES]> =
-    Lazy::new(|| std::array::from_fn(|_| Vect::new()));
-
-
+type On = dyn Fn(Arc<dyn Sync + Send>, &dyn Event) -> bool + Send + Sync;
 
 pub(crate) fn init() -> bool {
     if INIT.load(Ordering::Relaxed) {
@@ -125,135 +93,6 @@ pub(crate) fn init() -> bool {
         true
     }
 }
-pub(crate) fn close() {}
+pub(crate) fn close() {
 
-// System internal event codes. Application should use codes beyond 255.
-#[derive(PartialEq, Eq, Clone, Copy)]
-pub enum SystemEvent {
-    // Shuts the application down on the next frame.
-    ApplicationQuit,
-
-    // Keyboard key pressed.
-    /* Context usage:
-     * KeyPressed(key_code) => {
-     *
-     * }
-     */
-    KeyPressed(u16),
-
-    // Keyboard key released.
-    /* Context usage:
-     * KeyReleased(key_code) => {
-     *
-     * }
-     */
-    KeyReleased(u16),
-
-    // Mouse button pressed.
-    /* Context usage:
-     * ButtonPressed(button) => {
-     *
-     * }
-     */
-    ButtonPressed(u16),
-
-    // Mouse button released.
-    /* Context usage:
-     * ButtonReleased(button) => {
-     *
-     * }
-     */
-    ButtonReleased(u16),
-
-    // Mouse moved.
-    /* Context usage:
-     * MouseMoved(x, y) => {
-     *
-     * }
-     */
-    MouseMoved(u16, u16),
-
-    // Mouse moved.
-    /* Context usage:W
-     * MouseWheel(z_delta) => {
-     *
-     * }
-     */
-    MouseWheel(u8),
-
-    // Resized/resolution changed from the OS.
-    /* Context usage:
-     * Resized(width, height) => {
-     *
-     * }
-     */
-    Resized(u16, u16),
-}
-
-pub enum EventContext {
-    // 256 bytes
-    Unit,
-
-    I128([i128; 2]),
-    U128([u128; 2]),
-
-    I64([i64; 4]),
-    U64([u64; 4]),
-    F64([f64; 4]),
-
-    I32([i32; 8]),
-    U32([u32; 8]),
-    F32([f32; 8]),
-    C([char; 8]),
-
-    I16([i16; 16]),
-    U16([u16; 16]),
-
-    I8([i8; 32]),
-    U8([u8; 32]),
-}
-
-impl Event for SystemEvent {
-    fn get_id_and_context(&self) -> (u16, EventContext) {
-        match self {
-            Self::ApplicationQuit => (0x01, EventContext::Unit),
-            Self::KeyPressed(key_code) => (0x02, EventContext::U16({
-                let mut out = [0; 16];
-                out[0] = *key_code;
-                out
-            })),
-            Self::KeyReleased(key_code) => (0x03, EventContext::U16({
-                let mut out = [0; 16];
-                out[0] = *key_code;
-                out
-            })),
-            Self::ButtonPressed(button) => (0x04, EventContext::U16({
-                let mut out = [0; 16];
-                out[0] = *button;
-                out
-            })),
-            Self::ButtonReleased(button) => (0x05, EventContext::U16({
-                let mut out = [0; 16];
-                out[0] = *button;
-                out
-            })),
-            Self::MouseMoved(x, y) => (0x06, EventContext::U16({
-                let mut out = [0; 16];
-                out[0] = *x;
-                out[1] = *y;
-                out
-            })),
-            Self::MouseWheel(z_delta) => (0x07, EventContext::U8({
-                let mut out = [0; 32];
-                out[0] = *z_delta;
-                out
-            })),
-            Self::Resized(width, height) => (0x08, EventContext::U16({
-                let mut out = [0; 16];
-                out[0] = *width;
-                out[1] = *height;
-                out
-            })),
-        }
-    }
 }

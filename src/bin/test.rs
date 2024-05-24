@@ -12,7 +12,7 @@ impl strings::game::Game for MyGame {
     fn render(&self, _delta_time: f64) -> Result<(), GameError> {
         Ok(())
     }
-    fn on_resize(&mut self, _width: u32, _height: u32) {}
+    fn on_resize(&mut self, _width: u16, _height: u16) {}
 }
 
 strings::create_game! {
