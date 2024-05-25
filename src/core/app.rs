@@ -1,8 +1,8 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::game::*;
-use crate::platform::*;
 use crate::core::event;
+use crate::game::{Game, Error as GameError};
+use crate::platform::{PlatformState, Error as PlatformError};
 
 // Application configuration.
 pub struct AppConfig {
@@ -35,10 +35,10 @@ pub struct App {
 static INIT: AtomicBool = AtomicBool::new(false);
 
 impl App {
-    pub fn create(game: Box<dyn Game>, app_config: AppConfig) -> Result<Self, AppCreateError> {
+    pub fn create(game: Box<dyn Game>, app_config: AppConfig) -> Result<Self> {
         if INIT.load(Ordering::Relaxed) {
             crate::error!("`App::create()` called more than once.");
-            return Err(AppCreateError::MultipleCreateError);
+            return Err(Error::MultipleCreateError);
         }
 
         // Initialize subsystems.
@@ -63,7 +63,7 @@ impl App {
                 app_config.width,
                 app_config.height,
             )
-            .map_err(AppCreateError::Platform)?,
+            .map_err(Error::Platform)?,
             width: app_config.width,
             height: app_config.height,
             _last_time: 0.0,
@@ -71,12 +71,12 @@ impl App {
 
         if !event::init() {
             crate::error!("Event Syatem Failed Initialization. App cannot continue");
-            return Err(AppCreateError::MultipleCreateError);
+            return Err(Error::MultipleCreateError);
         }
 
         if let Err(e) = out.game.initialize() {
             crate::fatal!("Game failed to initialize.");
-            return Err(AppCreateError::Game(e));
+            return Err(Error::Game(e));
         }
 
         out.game.on_resize(out.width, out.height);
@@ -85,14 +85,14 @@ impl App {
 
         Ok(out)
     }
-    pub fn run(mut self) -> Result<(), AppRunError> {
+    pub fn run(mut self) -> Result<()> {
         let mut res = Ok(());
         crate::info!("{}", super::mem::get_memory_usage());
         while self.running {
             if !self
                 .platform
                 .pump_messages()
-                .map_err(AppRunError::Platform)?
+                .map_err(Error::Platform)?
             {
                 self.running = false;
             }
@@ -100,13 +100,13 @@ impl App {
                 if let Err(e) = self.game.update(0.) {
                     crate::fatal!("Game::update() failed, shutting down.");
                     self.running = false;
-                    res = Err(AppRunError::Game(e));
+                    res = Err(Error::Game(e));
                     break;
                 }
                 if let Err(e) = self.game.render(0.) {
                     crate::fatal!("Game::render() failed, shutting down.");
                     self.running = false;
-                    res = Err(AppRunError::Game(e));
+                    res = Err(Error::Game(e));
                     break;
                 }
             }
@@ -116,7 +116,7 @@ impl App {
 
         event::close();
 
-        self.platform.shutdown().map_err(AppRunError::Platform)?;
+        self.platform.shutdown().map_err(Error::Platform)?;
 
         crate::core::log::close();
 
@@ -124,12 +124,13 @@ impl App {
     }
 }
 
-pub enum AppCreateError {
+type Result<T> = std::result::Result<T, Error>;
+pub enum Error {
     MultipleCreateError,
     Platform(PlatformError),
     Game(GameError),
 }
-impl std::fmt::Debug for AppCreateError {
+impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MultipleCreateError => write!(f, "MultipleCreateError"),
@@ -138,7 +139,7 @@ impl std::fmt::Debug for AppCreateError {
         }
     }
 }
-impl std::fmt::Display for AppCreateError {
+impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MultipleCreateError => write!(f, "Attempt to create multiple `App` instances"),
@@ -147,39 +148,10 @@ impl std::fmt::Display for AppCreateError {
         }
     }
 }
-impl std::error::Error for AppCreateError {
+impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::MultipleCreateError => None,
-            Self::Platform(e) => Some(e),
-            Self::Game(e) => Some(e),
-        }
-    }
-}
-
-pub enum AppRunError {
-    Platform(PlatformError),
-    Game(GameError),
-}
-impl std::fmt::Debug for AppRunError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Platform(e) => write!(f, "{:?}", e),
-            Self::Game(e) => write!(f, "{:?}", e),
-        }
-    }
-}
-impl std::fmt::Display for AppRunError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Platform(e) => write!(f, "{}", e),
-            Self::Game(e) => write!(f, "{}", e),
-        }
-    }
-}
-impl std::error::Error for AppRunError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
             Self::Platform(e) => Some(e),
             Self::Game(e) => Some(e),
         }

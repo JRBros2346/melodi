@@ -1,6 +1,5 @@
 // Windows platform layer.
-use std::result::Result;
-use windows::core;
+use windows::core::*;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Gdi::*;
 use windows::Win32::System::LibraryLoader::*;
@@ -11,20 +10,13 @@ pub(crate) struct PlatformState {
     window: HWND,
 }
 impl PlatformState {
-    pub(crate) fn startup(
-        app_name: &str,
-        x: i16,
-        y: i16,
-        width: u16,
-        height: u16,
-    ) -> Result<Self, PlatformError> {
+    pub(crate) fn startup(app_name: &str, x: i16, y: i16, width: u16, height: u16) -> Result<Self> {
         unsafe {
             let mut out = Self {
                 instance: HINSTANCE::default(),
                 window: HWND::default(),
             };
-            GetModuleHandleExW(0, None, &mut out.instance.into() as *mut _)
-                .map_err(PlatformError)?;
+            GetModuleHandleExW(0, None, &mut out.instance.into() as *mut _).map_err(Error)?;
 
             // Setup and register window class.
             if RegisterClassExW(&WNDCLASSEXW {
@@ -34,22 +26,22 @@ impl PlatformState {
                 cbClsExtra: 0,
                 cbWndExtra: 0,
                 hInstance: out.instance,
-                hIcon: LoadIconW(out.instance, IDI_APPLICATION).map_err(PlatformError)?,
-                hCursor: LoadCursorW(None, IDC_ARROW).map_err(PlatformError)?,
+                hIcon: LoadIconW(out.instance, IDI_APPLICATION).map_err(Error)?,
+                hCursor: LoadCursorW(None, IDC_ARROW).map_err(Error)?,
                 hbrBackground: HBRUSH(0), // Transparent
-                lpszMenuName: core::PCWSTR::null(),
-                lpszClassName: core::w!("strings_window_class"),
+                lpszMenuName: PCWSTR::null(),
+                lpszClassName: w!("strings_window_class"),
                 hIconSm: HICON(0),
             } as *const _)
                 == 0
             {
                 MessageBoxW(
                     None,
-                    core::w!("Window registration failed"),
-                    core::w!("Error"),
+                    w!("Window registration failed"),
+                    w!("Error"),
                     MB_ICONEXCLAMATION | MB_OK,
                 );
-                return Err(PlatformError(core::Error::from_win32()));
+                return Err(Error(windows::core::Error::from_win32()));
             }
 
             // Create window
@@ -73,7 +65,7 @@ impl PlatformState {
             // Obtain the size of the border.
             let mut border = RECT::default();
             AdjustWindowRectEx(&mut border as *mut _, window_style, None, window_ex_style)
-                .map_err(PlatformError)?;
+                .map_err(Error)?;
 
             // In this case, the border rectangle is negative.
             window_x = window_x + border.left;
@@ -85,8 +77,8 @@ impl PlatformState {
 
             out.window = CreateWindowExW(
                 window_ex_style,
-                core::w!("strings_window_class"),
-                core::PCWSTR::from_raw(
+                w!("strings_window_class"),
+                PCWSTR::from_raw(
                     app_name
                         .encode_utf16()
                         .chain(std::iter::repeat(0).take(1))
@@ -106,12 +98,12 @@ impl PlatformState {
             if out.window.0 == 0 {
                 MessageBoxW(
                     None,
-                    core::w!("Window creation failed!"),
-                    core::w!("Error!"),
+                    w!("Window creation failed!"),
+                    w!("Error!"),
                     MB_ICONEXCLAMATION | MB_OK,
                 );
                 crate::fatal!("Window creation failed!");
-                return Err(PlatformError(core::Error::from_win32()));
+                return Err(Error(windows::core::Error::from_win32()));
             }
 
             // Show the window
@@ -131,16 +123,16 @@ impl PlatformState {
             Ok(out)
         }
     }
-    pub(crate) fn shutdown(&mut self) -> Result<(), PlatformError> {
+    pub(crate) fn shutdown(&mut self) -> Result<()> {
         unsafe {
             if self.window.0 != 0 {
-                DestroyWindow(self.window).map_err(PlatformError)?;
+                DestroyWindow(self.window).map_err(Error)?;
                 self.window = HWND::default();
             }
             Ok(())
         }
     }
-    pub(crate) fn pump_messages(&self) -> Result<bool, PlatformError> {
+    pub(crate) fn pump_messages(&self) -> Result<bool> {
         unsafe {
             let mut message = MSG::default();
             while PeekMessageW(&mut message as *mut _, None, 0, 0, PM_REMOVE).0 > 0 {
@@ -209,18 +201,19 @@ impl PlatformState {
     }
 }
 
-pub struct PlatformError(pub(self) windows::core::Error);
-impl std::fmt::Debug for PlatformError {
+pub type Result<T> = std::result::Result<T, Error>;
+pub struct Error(windows::core::Error);
+impl std::fmt::Debug for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.0)
     }
 }
-impl std::fmt::Display for PlatformError {
+impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
-impl std::error::Error for PlatformError {
+impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         Some(&self.0)
     }

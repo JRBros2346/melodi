@@ -7,7 +7,7 @@ macro_rules! create_game {
                 ::std::boxed::Box<dyn $crate::game::Game>,
                 $crate::core::app::AppConfig,
             ),
-            $crate::game::GameError,
+            $crate::game::Error,
         >
         $body
 

@@ -3,13 +3,13 @@ use strings::game::*;
 
 struct MyGame;
 impl strings::game::Game for MyGame {
-    fn initialize(&mut self) -> Result<(), GameError> {
+    fn initialize(&mut self) -> Result<()> {
         Ok(())
     }
-    fn update(&mut self, _delta_time: f64) -> Result<(), GameError> {
+    fn update(&mut self, _delta_time: f64) -> Result<()> {
         Ok(())
     }
-    fn render(&self, _delta_time: f64) -> Result<(), GameError> {
+    fn render(&self, _delta_time: f64) -> Result<()> {
         Ok(())
     }
     fn on_resize(&mut self, _width: u16, _height: u16) {}
