@@ -69,7 +69,7 @@ impl App {
             _last_time: 0.0,
         };
 
-        if !event::init() {
+        if let Err(event::Error) = event::init() {
             crate::error!("Event Syatem Failed Initialization. App cannot continue");
             return Err(Error::MultipleCreateError);
         }

@@ -10,12 +10,12 @@ static STATE: Lazy<Mutex<HashMap<&'static str, Vec<(Weak<dyn Send + Sync>, Box<O
 
 type On = dyn Fn(Arc<dyn Sync + Send>, &dyn Event) -> bool + Send + Sync;
 
-pub(crate) fn init() -> bool {
+pub(crate) fn init() -> Result<()> {
     if INIT.load(Ordering::Relaxed) {
-        false
+        Err(Error)
     } else {
         INIT.store(true, Ordering::Relaxed);
-        true
+        Ok(())
     }
 }
 pub(crate) fn close() {}
@@ -107,3 +107,13 @@ impl Drop for Listener {
         }
     }
 }
+
+pub type Result<T> = std::result::Result<T, Error>;
+#[derive(Debug)]
+pub struct Error;
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(Event Error)")
+    }
+}
+impl std::error::Error for Error {}
