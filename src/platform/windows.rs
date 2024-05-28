@@ -5,6 +5,8 @@ use windows::Win32::Graphics::Gdi::*;
 use windows::Win32::System::LibraryLoader::*;
 use windows::Win32::UI::WindowsAndMessaging::*;
 
+use crate::core::input::{self, Button, Key};
+
 pub(crate) struct PlatformState {
     instance: HINSTANCE,
     window: HWND,
@@ -68,12 +70,12 @@ impl PlatformState {
                 .map_err(Error)?;
 
             // In this case, the border rectangle is negative.
-            window_x = window_x + border.left;
-            window_y = window_y + border.top;
+            window_x += border.left;
+            window_y += border.top;
 
             // Grow by the size of the OS border.
-            window_width = window_width + (border.right - border.left);
-            window_height = window_height + (border.bottom - border.top);
+            window_width += border.right - border.left;
+            window_height += border.bottom - border.top;
 
             out.window = CreateWindowExW(
                 window_ex_style,
@@ -173,27 +175,49 @@ impl PlatformState {
             }
             WM_KEYDOWN | WM_SYSKEYDOWN | WM_KEYUP | WM_SYSKEYUP => {
                 // Key pressed/released
-                // let pressed = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
-                // TODO: input processing
+                let press = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
+                if let Some(key) = Key::from_repr(wparam.0 as u8) {
+                    // Pass to input subsystem.
+                    input::process_key(key, press);
+                }
             }
             WM_MOUSEMOVE => {
                 // Mouse move
-                // let x_position = (lparam.0 & 0xffff) as i32;
-                // let y_position = ((lparam.0 >> 16) & 0xffff) as i32;
-                // TODO: input processing.
+                let x = (lparam.0 & 0xffff) as i16;
+                let y = ((lparam.0 >> 16) & 0xffff) as i16;
+
+                // Pass the value to subsystem
+                input::process_mouse_move(x, y);
             }
             WM_MOUSEWHEEL => {
-                // let z_delta = ((wparam.0 >> 16) & 0xffff) as i32;
-                // if z_delta != 0 {
-                //     // Flatten the input to an OS-independent (-1, 1)
-                //     z_delta = if z_delta < 0 {-1} else {1};
-                //     // TODO: input processing.
-                // }
+                let mut z_delta = ((wparam.0 >> 16) & 0xffff) as i8;
+                if z_delta != 0 {
+                    // Flatten the input to an OS-independent (-1, 1)
+                    z_delta = if z_delta < 0 {-1} else {1};
+                    input::process_mouse_wheel(z_delta);
+                }
             }
             WM_LBUTTONDOWN | WM_MBUTTONDOWN | WM_RBUTTONDOWN | WM_LBUTTONUP | WM_MBUTTONUP
             | WM_RBUTTONUP => {
-                // let pressed = message == WM_LBUTTONDOWN || message == WM_RBUTTONDOWN || message == WM_MBUTTONDOWN;
-                // TODO: input processing.
+                let press = message == WM_LBUTTONDOWN || message == WM_RBUTTONDOWN || message == WM_MBUTTONDOWN;
+                let mut button: Option<Button> = None;
+                match message {
+                    WM_LBUTTONDOWN | WM_LBUTTONUP => {
+                        button = Some(Button::Left);
+                    }
+                    WM_MBUTTONDOWN | WM_MBUTTONUP => {
+                        button = Some(Button::Middle);
+                    }
+                    WM_RBUTTONDOWN | WM_RBUTTONUP => {
+                        button = Some(Button::Right);
+                    }
+                    _ => {}
+                }
+                
+                // Pass over to the input subsystem.
+                if let Some(button) = button {
+                    input::process_button(button, press);
+                }
             }
             _ => {}
         }

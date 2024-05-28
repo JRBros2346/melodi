@@ -1,8 +1,8 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::core::event;
-use crate::game::{Game, Error as GameError};
-use crate::platform::{PlatformState, Error as PlatformError};
+use crate::core::{event, input, log};
+use crate::game::{Error as GameError, Game};
+use crate::platform::{Error as PlatformError, PlatformState};
 
 // Application configuration.
 pub struct AppConfig {
@@ -42,7 +42,8 @@ impl App {
         }
 
         // Initialize subsystems.
-        let _ = crate::core::log::init();
+        let _ = log::init();
+        input::init();
 
         // TODO: Remove this.
         crate::fatal!("The value is: {}", std::f64::consts::PI);
@@ -89,11 +90,7 @@ impl App {
         let mut res = Ok(());
         crate::info!("{}", super::mem::get_memory_usage());
         while self.running {
-            if !self
-                .platform
-                .pump_messages()
-                .map_err(Error::Platform)?
-            {
+            if !self.platform.pump_messages().map_err(Error::Platform)? {
                 self.running = false;
             }
             if !self.suspended {
@@ -109,12 +106,19 @@ impl App {
                     res = Err(Error::Game(e));
                     break;
                 }
+
+                // NOTE: Input update/state copying should always be handled
+                // after any input should be recorded; I.E. before this line.
+                // As a safety, input is the last thing to be updated before
+                // this frame ends.
+                input::update(0.);
             }
         }
 
         self.running = false;
 
         event::close();
+        input::close();
 
         self.platform.shutdown().map_err(Error::Platform)?;
 

@@ -9,7 +9,6 @@ pub trait Game {
     fn on_resize(&mut self, width: u16, height: u16);
 }
 
-
 pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {}
