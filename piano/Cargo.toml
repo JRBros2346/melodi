@@ -1,0 +1,9 @@
+[package]
+name = "piano"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+strings = { path = ".." }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"

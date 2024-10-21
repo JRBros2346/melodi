@@ -1,9 +1,9 @@
-pub mod core;
+use winit::{
+    error::EventLoopError,
+    event_loop::{EventLoop, EventLoopBuilder},
+};
 
-#[cfg_attr(windows, path = "platform/windows.rs")]
-#[cfg_attr(target_os = "linux", path = "platform/linux.rs")]
-pub mod platform;
-
-pub mod game;
-
-pub mod entry;
+#[derive(Default)]
+pub struct Game<T> {
+    pub game_state: T,
+}
