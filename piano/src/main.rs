@@ -1,24 +1,19 @@
 use strings::*;
-use winit::dpi::{PhysicalPosition, PhysicalSize};
 
-fn main() {
-    tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new()).unwrap();
-    error!("ERROR");
-    warn!("WARN");
-    info!("INFO");
-    debug!("DEBUG");
-    trace!("TRACE");
-
-    let event_loop = winit::event_loop::EventLoop::new().unwrap();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new())?;
+    let event_loop = winit::event_loop::EventLoop::new()?;
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
 
-    let mut platform_state = PlatformState::new(
-        "Piano",
-        PhysicalPosition { x: 100, y: 100 },
-        PhysicalSize {
+    let mut app = App::with_config(AppConfig {
+        title: "Piano".into(),
+        position: PhysicalPosition { x: 100, y: 100 }.into(),
+        size: PhysicalSize {
             width: 1280,
             height: 720,
-        },
-    );
-    event_loop.run_app(&mut platform_state).unwrap();
+        }
+        .into(),
+    });
+    event_loop.run_app(&mut app)?;
+    Ok(())
 }
