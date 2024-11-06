@@ -1,19 +1,57 @@
+use std::convert::Infallible;
+
 use strings::*;
+use tracing::Level;
+use tracing_subscriber::layer::SubscriberExt;
+
+struct Game {
+    app_config: Config,
+}
+
+impl GameState for Game {
+    type GameError = Infallible;
+    fn app_config(&self) -> &Config {
+        &self.app_config
+    }
+
+    fn init() -> Result<Self, Self::GameError> {
+        debug!("Game Initialized");
+        Ok(Self {
+            app_config: Config {
+                title: "Piano".into(),
+                position: PhysicalPosition { x: 100, y: 100 }.into(),
+                size: PhysicalSize {
+                    width: 1280,
+                    height: 720,
+                }
+                .into(),
+            },
+        })
+    }
+
+    fn update(&mut self, delta_time: f64) -> Result<(), Self::GameError> {
+        Ok(())
+    }
+
+    fn render(&mut self, delta_time: f64) -> Result<(), Self::GameError> {
+        Ok(())
+    }
+
+    fn resize<S: Into<Size>>(&mut self, size: S) -> Result<(), Self::GameError> {
+        Ok(())
+    }
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing::subscriber::set_global_default(tracing_subscriber::FmtSubscriber::new())?;
-    let event_loop = winit::event_loop::EventLoop::new()?;
-    event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
+    tracing::subscriber::set_global_default(
+        tracing_subscriber::FmtSubscriber::builder()
+            .with_max_level(Level::TRACE)
+            .compact()
+            .finish(),
+    )?;
 
-    let mut app = App::with_config(AppConfig {
-        title: "Piano".into(),
-        position: PhysicalPosition { x: 100, y: 100 }.into(),
-        size: PhysicalSize {
-            width: 1280,
-            height: 720,
-        }
-        .into(),
-    });
+    let mut app = Strings::with_game(Game::init()?)?;
+    let event_loop = winit::event_loop::EventLoop::new()?;
     event_loop.run_app(&mut app)?;
     Ok(())
 }

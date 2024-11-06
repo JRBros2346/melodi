@@ -3,53 +3,59 @@ use winit::{
     application::ApplicationHandler,
     dpi::{Position, Size},
     event::WindowEvent,
-    event_loop::ActiveEventLoop,
+    event_loop::{ActiveEventLoop, ControlFlow},
     window::{Window, WindowId},
 };
 
-pub struct AppConfig {
+pub struct Config {
     pub title: String,
     pub position: Position,
     pub size: Size,
 }
 
-pub struct App {
+pub struct Strings<G: GameState> {
+    suspended: bool,
     window: Option<Window>,
-    title: String,
-    position: Position,
-    size: Size,
     last_time: f64,
+    game: G,
 }
 
-impl App {
-    pub fn with_config(app_config: AppConfig) -> Self {
+impl<G: GameState> Strings<G> {
+    pub fn with_game(mut game: G) -> Result<Self, Box<dyn std::error::Error>> {
         error!("ERROR");
         warn!("WARN");
         info!("INFO");
         debug!("DEBUG");
         trace!("TRACE");
-        Self {
+
+        game.resize(game.app_config().size)?;
+
+        Ok(Self {
+            suspended: false,
             window: None,
-            title: app_config.title,
-            position: app_config.position,
-            size: app_config.size,
             last_time: 0.,
-        }
+            game,
+        })
     }
 }
 
-impl ApplicationHandler for App {
+impl<G: GameState> ApplicationHandler for Strings<G> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        event_loop.set_control_flow(ControlFlow::Poll);
+        self.suspended = false;
         self.window = Some(
             event_loop
                 .create_window(
                     Window::default_attributes()
-                        .with_title(&self.title)
-                        .with_position(self.position)
-                        .with_inner_size(self.size),
+                        .with_title(&self.game.app_config().title)
+                        .with_position(self.game.app_config().position)
+                        .with_inner_size(self.game.app_config().size),
                 )
                 .unwrap(),
         )
+    }
+    fn suspended(&mut self, event_loop: &ActiveEventLoop) {
+        self.suspended = true;
     }
     fn window_event(
         &mut self,
@@ -58,7 +64,18 @@ impl ApplicationHandler for App {
         event: WindowEvent,
     ) {
         match event {
-            WindowEvent::RedrawRequested => {}
+            WindowEvent::RedrawRequested => {
+                if !self.suspended {
+                    self.game.update(0.).unwrap_or_else(|e| {
+                        error!("Game Update Failed.. {e}");
+                        event_loop.exit();
+                    });
+                    self.game.render(0.).unwrap_or_else(|e| {
+                        error!("Game Render Failed.. {e}");
+                        event_loop.exit();
+                    });
+                }
+            }
             WindowEvent::CloseRequested => {
                 event_loop.exit();
             }
