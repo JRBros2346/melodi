@@ -2,7 +2,6 @@ use std::convert::Infallible;
 
 use strings::*;
 use tracing::Level;
-use tracing_subscriber::layer::SubscriberExt;
 
 struct Game {
     app_config: Config,
@@ -30,14 +29,17 @@ impl GameState for Game {
     }
 
     fn update(&mut self, delta_time: f64) -> Result<(), Self::GameError> {
+        let _ = delta_time;
         Ok(())
     }
 
     fn render(&mut self, delta_time: f64) -> Result<(), Self::GameError> {
+        let _ = delta_time;
         Ok(())
     }
 
     fn resize<S: Into<Size>>(&mut self, size: S) -> Result<(), Self::GameError> {
+        let _ = size;
         Ok(())
     }
 }

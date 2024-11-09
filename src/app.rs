@@ -13,7 +13,7 @@ pub struct Config {
     pub size: Size,
 }
 
-pub struct Strings<G: GameState> {
+pub struct Strings<G> {
     suspended: bool,
     window: Option<Window>,
     last_time: f64,

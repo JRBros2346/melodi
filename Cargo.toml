@@ -6,6 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+accesskit = "0.17.0"
+accesskit_winit = "0.23.0"
 tracing = "0.1.40"
 wgpu = "22.1.0"
 winit = "0.30.5"
