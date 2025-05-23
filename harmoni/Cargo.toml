@@ -1,8 +1,8 @@
 [package]
-name = "piano"
+name = "harmoni"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-strings = { path = ".." }
+melodi = { path = ".." }
 tracing-subscriber = "0.3.18"
