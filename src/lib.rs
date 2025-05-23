@@ -7,3 +7,6 @@ pub use app::{Config, Strings};
 
 pub mod game;
 pub use game::GameState;
+
+pub mod events;
+pub use events::GameEvent;

@@ -2,6 +2,7 @@ use std::convert::Infallible;
 
 use strings::*;
 use tracing::Level;
+use winit::event_loop::EventLoop;
 
 struct Game {
     app_config: Config,
@@ -53,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     let mut app = Strings::with_game(Game::init()?)?;
-    let event_loop = winit::event_loop::EventLoop::new()?;
+    let event_loop = EventLoop::<GameEvent<()>>::with_user_event().build()?;
     event_loop.run_app(&mut app)?;
     Ok(())
 }

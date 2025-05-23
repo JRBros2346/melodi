@@ -1,5 +1,5 @@
 [package]
-name = "strings"
+name = "melodi"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,4 +13,4 @@ wgpu = "22.1.0"
 winit = "0.30.5"
 
 [workspace]
-members = [ "piano" ]
+members = [ "harmoni" ]
