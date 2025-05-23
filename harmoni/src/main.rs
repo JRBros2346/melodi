@@ -18,7 +18,7 @@ impl GameState for Game {
         debug!("Game Initialized");
         Ok(Self {
             app_config: Config {
-                title: "Piano".into(),
+                title: "Harmoni".into(),
                 position: PhysicalPosition { x: 100, y: 100 }.into(),
                 size: PhysicalSize {
                     width: 1280,
