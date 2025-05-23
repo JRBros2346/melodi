@@ -3,7 +3,7 @@ pub use winit;
 pub use winit::dpi::*;
 
 pub mod app;
-pub use app::{Config, Strings};
+pub use app::{Config, Melodi};
 
 pub mod game;
 pub use game::GameState;

@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .finish(),
     )?;
 
-    let mut app = Strings::with_game(Game::init()?)?;
+    let mut app = Melodi::with_game(Game::init()?)?;
     let event_loop = EventLoop::<GameEvent<()>>::with_user_event().build()?;
     event_loop.run_app(&mut app)?;
     Ok(())

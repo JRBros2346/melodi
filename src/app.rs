@@ -16,34 +16,17 @@ pub struct Config {
     pub size: Size,
 }
 
-pub struct Strings<G> {
+pub struct Melodi<G> {
     suspended: bool,
     window: Option<Window>,
     _last_time: Option<Instant>,
     game: G,
 }
 
-impl<G: GameState> Strings<G> {
-    /// Get a reference to the application's configuration.
-    ///
-    /// This method returns a reference to the `Config` struct which contains the title,
-    /// position, and size of the window.
-    ///
-    /// The config is owned by the game and therefore this method returns a reference to
-    /// the game's config.
+impl<G: GameState> Melodi<G> {
     pub fn config(&self) -> &Config {
         self.game.app_config()
     }
-    /// Create a new `Strings` instance with the given game.
-    ///
-    /// The game will be initialized with the `init` method and the window will be created
-    /// with the `create_window` method.
-    ///
-    /// The event loop will be set to poll mode and the `Strings` instance will take ownership
-    /// of the game.
-    ///
-    /// The method will return an `Err` if the game fails to initialize or the window fails
-    /// to create.
     pub fn with_game(mut game: G) -> Result<Self, Box<dyn std::error::Error>> {
         // Log the event levels to the console
         error!("ERROR");
@@ -65,7 +48,7 @@ impl<G: GameState> Strings<G> {
     }
 }
 
-impl<G, U> ApplicationHandler<GameEvent<U>> for Strings<G>
+impl<G, U> ApplicationHandler<GameEvent<U>> for Melodi<G>
 where
     G: GameState,
     U: 'static,
@@ -74,7 +57,10 @@ where
         debug!("Resuming application");
         event_loop.set_control_flow(ControlFlow::Poll);
         self.suspended = false;
-        debug!("Creating window with title: {}", self.game.app_config().title);
+        debug!(
+            "Creating window with title: {}",
+            self.game.app_config().title
+        );
         self.window = Some(
             event_loop
                 .create_window(
