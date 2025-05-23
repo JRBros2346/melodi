@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use strings::*;
+use melodi::*;
 use tracing::Level;
 use winit::event_loop::EventLoop;
 
